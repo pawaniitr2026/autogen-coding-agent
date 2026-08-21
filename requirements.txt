@@ -1,7 +1,4 @@
 streamlit
-ag2
 pyautogen
 openai
 python-dotenv
-pandas
-numpy
