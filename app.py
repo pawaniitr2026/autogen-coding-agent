@@ -142,38 +142,38 @@ if st.button("🚀 Run Agent Task", type="primary"):
     # Create Code Executor
     # --------------------------------------------------------
 
+
     try:
-
         if executor_type == "Docker Execution":
-
-            st.info(
-                "🐳 Initializing Docker Python executor..."
-            )
-
-            executor = DockerCommandLineCodeExecutor(
-                image="python:3-slim",
-                timeout=60,
-                work_dir=work_dir,
-                auto_remove=True,
-            )
-
+            st.info("🐳 Initializing Docker Python executor...")
+            
+            # Check if docker dependency and daemon are available
+            try:
+                import docker
+                executor = DockerCommandLineCodeExecutor(
+                    image="python:3-slim",
+                    timeout=60,
+                    work_dir=work_dir,
+                    auto_remove=True,
+                )
+            except (ImportError, Exception) as docker_err:
+                st.warning(
+                    "⚠️ Docker environment is not available on Streamlit Cloud. "
+                    "Falling back to Local Execution."
+                )
+                executor = LocalCommandLineCodeExecutor(
+                    timeout=60,
+                    work_dir=work_dir,
+                )
         else:
-
-            st.info(
-                "🐍 Initializing local Python executor..."
-            )
-
+            st.info("🐍 Initializing local Python executor...")
             executor = LocalCommandLineCodeExecutor(
                 timeout=60,
                 work_dir=work_dir,
             )
 
     except Exception as e:
-
-        st.error(
-            f"❌ Executor initialization failed: {e}"
-        )
-
+        st.error(f"❌ Executor initialization failed: {e}")
         st.exception(e)
         st.stop()
 
