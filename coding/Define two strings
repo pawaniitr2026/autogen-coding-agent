@@ -1,0 +1,9 @@
+# Define two strings
+string1 = "Hello, "
+string2 = "World!"
+
+# Concatenate the strings using the '+' operator
+result = string1 + string2
+
+# Print the result
+print("Concatenated String:", result)
