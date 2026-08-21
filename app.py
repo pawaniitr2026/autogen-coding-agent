@@ -4,12 +4,8 @@ from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
-
-#from autogen import AssistantAgent, UserProxyAgent
-#from autogen.coding import (
-#    DockerCommandLineCodeExecutor,
-#    LocalCommandLineCodeExecutor,
-#)
+from autogen import AssistantAgent, UserProxyAgent
+from autogen.coding import LocalCommandLineCodeExecutor
 
 
 # ============================================================
@@ -171,6 +167,7 @@ try:
             timeout=60,
             work_dir=work_dir,
         )
+
 except Exception as e:
     st.error(f"❌ Executor initialization failed: {e}")
     st.exception(e)
