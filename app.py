@@ -4,8 +4,12 @@ from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
+
 from autogen import AssistantAgent, UserProxyAgent
-from autogen.coding import LocalCommandLineCodeExecutor
+from autogen.coding import (
+    DockerCommandLineCodeExecutor,
+    LocalCommandLineCodeExecutor,
+)
 
 
 # ============================================================
@@ -138,13 +142,13 @@ if st.button("🚀 Run Agent Task", type="primary"):
     # Create Code Executor
     # --------------------------------------------------------
 
+    try:
 
-try:
-    if executor_type == "Docker Execution":
-        st.info("🐳 Initializing Docker Python executor...")
-        try:
-            import docker
-            from autogen.coding import DockerCommandLineCodeExecutor
+        if executor_type == "Docker Execution":
+
+            st.info(
+                "🐳 Initializing Docker Python executor..."
+            )
 
             executor = DockerCommandLineCodeExecutor(
                 image="python:3-slim",
@@ -152,26 +156,26 @@ try:
                 work_dir=work_dir,
                 auto_remove=True,
             )
-        except (ImportError, Exception) as docker_err:
-            st.warning(
-                "⚠️ Docker environment is not available on Streamlit Cloud. "
-                "Falling back to Local Execution."
+
+        else:
+
+            st.info(
+                "🐍 Initializing local Python executor..."
             )
+
             executor = LocalCommandLineCodeExecutor(
                 timeout=60,
                 work_dir=work_dir,
             )
-    else:
-        st.info("🐍 Initializing local Python executor...")
-        executor = LocalCommandLineCodeExecutor(
-            timeout=60,
-            work_dir=work_dir,
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Executor initialization failed: {e}"
         )
 
-except Exception as e:
-    st.error(f"❌ Executor initialization failed: {e}")
-    st.exception(e)
-    st.stop()
+        st.exception(e)
+        st.stop()
 
     # ========================================================
     # LLM CONFIGURATION
