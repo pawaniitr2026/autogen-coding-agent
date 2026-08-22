@@ -12,19 +12,37 @@ from autogen.coding import (
 )
 
 # ============================================================
-# LOAD ENVIRONMENT VARIABLES & SECRETS
+# LOAD ENVIRONMENT VARIABLES & SECRETS SAFELY
 # ============================================================
 
 load_dotenv()
 
-# Check for secrets across Streamlit Secrets, .env, or OS Environment
-env_api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+
+def get_api_key():
+    """Safely retrieves the API key checking Streamlit Secrets,
+
+    then environment variables, returning an empty string if missing.
+    """
+    try:
+        if "OPENAI_API_KEY" in st.secrets:
+            return st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        # Prevents StreamlitSecretNotFoundError when secrets.toml doesn't exist locally
+        pass
+
+    return os.getenv("OPENAI_API_KEY", "")
+
+
+env_api_key = get_api_key()
 
 # Detect if running on Streamlit Community Cloud
-IS_STREAMLIT_CLOUD = os.getenv("STREAMLIT_SERVER_GATHER_USAGE_STATS") is not None or "STREAMLIT_SHARING" in os.environ
+IS_STREAMLIT_CLOUD = (
+    os.getenv("STREAMLIT_SERVER_GATHER_USAGE_STATS") is not None
+    or "STREAMLIT_SHARING" in os.environ
+)
 
 # ============================================================
-# STREAMLIT CONFIGURATION
+# STREAMLIT PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
@@ -63,7 +81,9 @@ model_name = st.sidebar.selectbox(
 
 # Handle Docker availability guardrail for Streamlit Cloud deployment
 if IS_STREAMLIT_CLOUD:
-    st.sidebar.warning("⚠️ Docker unavailable on Streamlit Cloud. Defaulting to Local Execution.")
+    st.sidebar.warning(
+        "⚠️ Docker unavailable on Streamlit Cloud. Defaulting to Local Execution."
+    )
     executor_options = ["Local Execution"]
     default_idx = 0
 else:
@@ -104,7 +124,9 @@ user_prompt = st.text_area(
 if st.button("🚀 Run Agent Task", type="primary"):
 
     if not api_key:
-        st.error("❌ API key not found. Please provide an API key in secrets, .env, or sidebar.")
+        st.error(
+            "❌ API key not found. Please provide an API key in secrets, .env, or sidebar."
+        )
         st.stop()
 
     if not user_prompt.strip():
@@ -134,7 +156,7 @@ if st.button("🚀 Run Agent Task", type="primary"):
         st.exception(e)
         st.stop()
 
-    # LLM Config
+    # LLM Configuration
     llm_config = {
         "config_list": [
             {
@@ -177,10 +199,9 @@ if st.button("🚀 Run Agent Task", type="primary"):
         ),
     )
 
-    # Execute Conversation inside Context Manager to guarantee resource cleanup
+    # Execute Conversation inside Context Manager to ensure clean executor shutdown
     with st.spinner("🤖 Agent is generating and executing Python code..."):
         try:
-            # Wrap execution inside executor start/stop if applicable
             with executor:
                 chat_res = user_proxy.initiate_chat(
                     assistant,
@@ -200,12 +221,18 @@ if st.button("🚀 Run Agent Task", type="primary"):
     execution_output = ""
 
     for msg in chat_history:
-        content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+        content = (
+            msg.get("content", "")
+            if isinstance(msg, dict)
+            else getattr(msg, "content", "")
+        )
         if not content:
             continue
 
         # Extract latest Python code block
-        match = re.findall(r"```python\s*(.*?)```", content, re.DOTALL | re.IGNORECASE)
+        match = re.findall(
+            r"```python\s*(.*?)```", content, re.DOTALL | re.IGNORECASE
+        )
         if match:
             generated_code = match[-1].strip()
 
@@ -237,17 +264,32 @@ if st.button("🚀 Run Agent Task", type="primary"):
     with tab3:
         st.subheader("💬 AutoGen Agent Conversation")
         for msg in chat_history:
-            sender = msg.get("name") or msg.get("role") or "Agent" if isinstance(msg, dict) else getattr(msg, "name", "Agent")
-            content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+            sender = (
+                msg.get("name") or msg.get("role") or "Agent"
+                if isinstance(msg, dict)
+                else getattr(msg, "name", "Agent")
+            )
+            content = (
+                msg.get("content", "")
+                if isinstance(msg, dict)
+                else getattr(msg, "content", "")
+            )
             if not content:
                 continue
 
             st.markdown(f"**🤖 {sender}**")
             if "```python" in content:
-                match = re.search(r"```python\s*(.*?)```", content, re.DOTALL | re.IGNORECASE)
+                match = re.search(
+                    r"```python\s*(.*?)```", content, re.DOTALL | re.IGNORECASE
+                )
                 if match:
                     st.code(match.group(1).strip(), language="python")
-                remaining_text = re.sub(r"```python\s*.*?```", "", content, flags=re.DOTALL | re.IGNORECASE).strip()
+                remaining_text = re.sub(
+                    r"```python\s*.*?```",
+                    "",
+                    content,
+                    flags=re.DOTALL | re.IGNORECASE,
+                ).strip()
                 if remaining_text:
                     st.write(remaining_text)
             else:
@@ -258,4 +300,8 @@ if st.button("🚀 Run Agent Task", type="primary"):
 # ============================================================
 
 st.sidebar.markdown("---")
-st.sidebar.info("Environment: **" + ("Streamlit Cloud" if IS_STREAMLIT_CLOUD else "Local/Self-Hosted") + "**")
+st.sidebar.info(
+    "Environment: **"
+    + ("Streamlit Cloud" if IS_STREAMLIT_CLOUD else "Local/Self-Hosted")
+    + "**"
+)
