@@ -1,4 +1,4 @@
 streamlit>=1.30.0
-ag2-classic
+autogen
 python-dotenv>=1.0.0
 docker>=7.0.0
