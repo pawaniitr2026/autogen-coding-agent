@@ -28,7 +28,6 @@ def get_api_key():
         if "OPENAI_API_KEY" in st.secrets:
             return st.secrets["OPENAI_API_KEY"]
     except Exception:
-        # Prevents StreamlitSecretNotFoundError when secrets.toml doesn't exist locally
         pass
 
     return os.getenv("OPENAI_API_KEY", "")
@@ -38,14 +37,7 @@ env_api_key = get_api_key()
 
 
 def is_docker_execution_available() -> bool:
-    """Check whether Docker is actually usable in the current environment.
-
-    Rather than guessing the hosting platform from env vars (which is
-    unreliable), this checks the real thing we care about: is there a
-    Docker CLI and a reachable daemon? This returns False automatically
-    on Streamlit Community Cloud (no Docker socket exposed) and True on
-    any host where Docker is genuinely available.
-    """
+    """Check whether Docker daemon is reachable in current environment."""
     if shutil.which("docker") is None:
         return False
     try:
@@ -98,12 +90,9 @@ model_name = st.sidebar.selectbox(
     ],
 )
 
-# Handle Docker availability guardrail (works the same on Streamlit Cloud,
-# local machines, or any other host)
+# Environment Execution Logic
 if not DOCKER_AVAILABLE:
-    st.sidebar.warning(
-        "⚠️ Docker isn't available in this environment. Defaulting to Local Execution."
-    )
+    st.sidebar.info("ℹ️ Running in Cloud/Server environment. Mode: Local Execution")
     executor_options = ["Local Execution"]
     default_idx = 0
 else:
@@ -115,17 +104,10 @@ executor_type = st.sidebar.radio(
     options=executor_options,
     index=default_idx,
     help=(
-        "Local Execution runs Python directly on your machine. "
+        "Local Execution runs Python directly in the host environment. "
         "Docker Execution runs code inside an isolated Docker container."
     ),
 )
-
-if not DOCKER_AVAILABLE:
-    st.sidebar.caption(
-        "🔒 Note: Local Execution runs LLM-generated code as a subprocess "
-        "on this server without container isolation. Avoid exposing this "
-        "app publicly without access controls."
-    )
 
 # ============================================================
 # WORKING DIRECTORY SETUP
@@ -226,7 +208,7 @@ if st.button("🚀 Run Agent Task", type="primary"):
         ),
     )
 
-    # Safe execution sequence supporting both Local and Docker executors
+    # Execution Sequence
     with st.spinner("🤖 Agent is generating and executing Python code..."):
         try:
             if hasattr(executor, "start"):
@@ -261,14 +243,12 @@ if st.button("🚀 Run Agent Task", type="primary"):
         if not content:
             continue
 
-        # Extract latest Python code block
         match = re.findall(
             r"```python\s*(.*?)```", content, re.DOTALL | re.IGNORECASE
         )
         if match:
             generated_code = match[-1].strip()
 
-        # Extract execution result
         if "exitcode:" in content.lower():
             execution_output = content.strip()
 
@@ -333,5 +313,5 @@ if st.button("🚀 Run Agent Task", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "Docker execution: **" + ("available" if DOCKER_AVAILABLE else "unavailable") + "**"
+    "Docker execution: **" + ("Available" if DOCKER_AVAILABLE else "Disabled (Cloud Mode)") + "**"
 )
