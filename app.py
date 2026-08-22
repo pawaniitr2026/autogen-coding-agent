@@ -172,6 +172,7 @@ if st.button("🚀 Run Agent Task", type="primary"):
                 "model": model_name,
                 "api_key": api_key,
                 "base_url": "https://openrouter.ai/api/v1",
+                "api_type": "openai",
             }
         ],
         "temperature": 0,
