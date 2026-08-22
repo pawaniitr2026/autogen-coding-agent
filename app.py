@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from pathlib import Path
 
 import streamlit as st
@@ -35,11 +36,29 @@ def get_api_key():
 
 env_api_key = get_api_key()
 
-# Detect if running on Streamlit Community Cloud
-IS_STREAMLIT_CLOUD = (
-    os.getenv("STREAMLIT_SERVER_GATHER_USAGE_STATS") is not None
-    or "STREAMLIT_SHARING" in os.environ
-)
+
+def is_docker_execution_available() -> bool:
+    """Check whether Docker is actually usable in the current environment.
+
+    Rather than guessing the hosting platform from env vars (which is
+    unreliable), this checks the real thing we care about: is there a
+    Docker CLI and a reachable daemon? This returns False automatically
+    on Streamlit Community Cloud (no Docker socket exposed) and True on
+    any host where Docker is genuinely available.
+    """
+    if shutil.which("docker") is None:
+        return False
+    try:
+        import docker as docker_sdk
+
+        client = docker_sdk.from_env()
+        client.ping()
+        return True
+    except Exception:
+        return False
+
+
+DOCKER_AVAILABLE = is_docker_execution_available()
 
 # ============================================================
 # STREAMLIT PAGE CONFIGURATION
@@ -79,10 +98,11 @@ model_name = st.sidebar.selectbox(
     ],
 )
 
-# Handle Docker availability guardrail for Streamlit Cloud deployment
-if IS_STREAMLIT_CLOUD:
+# Handle Docker availability guardrail (works the same on Streamlit Cloud,
+# local machines, or any other host)
+if not DOCKER_AVAILABLE:
     st.sidebar.warning(
-        "⚠️ Docker unavailable on Streamlit Cloud. Defaulting to Local Execution."
+        "⚠️ Docker isn't available in this environment. Defaulting to Local Execution."
     )
     executor_options = ["Local Execution"]
     default_idx = 0
@@ -99,6 +119,13 @@ executor_type = st.sidebar.radio(
         "Docker Execution runs code inside an isolated Docker container."
     ),
 )
+
+if not DOCKER_AVAILABLE:
+    st.sidebar.caption(
+        "🔒 Note: Local Execution runs LLM-generated code as a subprocess "
+        "on this server without container isolation. Avoid exposing this "
+        "app publicly without access controls."
+    )
 
 # ============================================================
 # WORKING DIRECTORY SETUP
@@ -306,7 +333,5 @@ if st.button("🚀 Run Agent Task", type="primary"):
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "Environment: **"
-    + ("Streamlit Cloud" if IS_STREAMLIT_CLOUD else "Local/Self-Hosted")
-    + "**"
+    "Docker execution: **" + ("available" if DOCKER_AVAILABLE else "unavailable") + "**"
 )
