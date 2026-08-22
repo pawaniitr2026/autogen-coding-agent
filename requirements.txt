@@ -1,7 +1,4 @@
-streamlit
-ag2
-pyautogen
-openai
-python-dotenv
-pandas
-numpy
+streamlit>=1.30.0
+pyautogen>=0.2.0
+python-dotenv>=1.0.0
+docker>=7.0.0
