@@ -199,18 +199,23 @@ if st.button("🚀 Run Agent Task", type="primary"):
         ),
     )
 
-    # Execute Conversation inside Context Manager to ensure clean executor shutdown
+    # Safe execution sequence supporting both Local and Docker executors
     with st.spinner("🤖 Agent is generating and executing Python code..."):
         try:
-            with executor:
-                chat_res = user_proxy.initiate_chat(
-                    assistant,
-                    message=user_prompt,
-                )
+            if hasattr(executor, "start"):
+                executor.start()
+
+            chat_res = user_proxy.initiate_chat(
+                assistant,
+                message=user_prompt,
+            )
         except Exception as e:
             st.error(f"❌ Agent execution failed: {e}")
             st.exception(e)
             st.stop()
+        finally:
+            if hasattr(executor, "stop"):
+                executor.stop()
 
     st.success("✅ Agent task completed!")
 
