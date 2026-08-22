@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  streamlit-autogen:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount host Docker socket so AutoGen can spawn sibling execution containers
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./coding:/app/coding
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
